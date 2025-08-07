@@ -1,0 +1,50 @@
+/*
+Used the same bronze layer table with silver schema but creating in normailzation form to
+avoid reduandency.
+*/
+-- starting the silver layers
+-- customer table
+CREATE TABLE IF NOT EXISTS silver.customer (
+	customer_ID INT PRIMARY KEY,
+	DOB DATE,
+	GENDER TEXT,
+	city_code INT
+);
+
+-- calender table
+CREATE TABLE IF NOT EXISTS silver.calender (
+	date_key DATE PRIMARY KEY,
+	day INT,
+	month INT,
+	month_name TEXT,
+	quarter INT,
+	year INT,
+	weekday_name TEXT
+);
+
+-- product cateogry Normalization
+-- category Table
+CREATE TABLE IF NOT EXISTS silver.product_category (
+	prod_cat_code INT PRIMARY KEY,
+	prod_cat TEXT
+);
+
+-- sub category
+CREATE TABLE IF NOT EXISTS silver.product_subcategory (
+	prod_sub_cat_code INT PRIMARY KEY,
+	prod_cat_code INT REFERENCES silver.product_category(prod_cat_code),
+	prod_subcat TEXT
+);
+
+-- Transactions table referencing normalized product tables
+CREATE TABLE IF NOT EXISTS silver.transactions (
+	transaction_id BIGINT PRIMARY KEY,
+	cust_id INT REFERENCES silver.customer(customer_id),
+	tran_date DATE,
+	prod_sub_cat_code INT REFERENCES silver.product_subcategory(prod_sub_cat_code),
+	Qty INT,
+	Rate INT,
+	Tax NUMERIC(10, 2),
+	total_amt NUMERIC(10, 2),
+	Store_type TEXT
+);
