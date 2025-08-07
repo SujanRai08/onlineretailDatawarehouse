@@ -1,6 +1,19 @@
 retailsales=# SET datestyle = dmy;
 SET
+-- insertion from csv to the bronze.customer
 retailsales=# \COPY bronze.customer FROM 'C:/Users/Acer/
 Downloads/archive (1)/Customer.csv' WITH(FORMAT csv, HEA
 DER true, DELIMITER ',');
 COPY 5647
+
+-- insertion from csv to the bronze.prod_cat_info 
+retailsales=# \COPY bronze.prod_cat_info FROM 'C:/Users/
+Acer/Downloads/archive (1)/prod_cat_info.csv' WITH(FORMA
+T csv, HEADER true, DELIMITER ',');
+COPY 23
+
+-- insertion from csv to the bronze.transaction 
+retailsales=# \COPY bronze.transactions FROM 'C:/Users/A
+cer/Downloads/archive (1)/Transactions.csv' WITH(FORMAT
+csv, HEADER true, DELIMITER ',');
+COPY 23053
