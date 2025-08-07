@@ -1,0 +1,6 @@
+retailsales=# SET datestyle = dmy;
+SET
+retailsales=# \COPY bronze.customer FROM 'C:/Users/Acer/
+Downloads/archive (1)/Customer.csv' WITH(FORMAT csv, HEA
+DER true, DELIMITER ',');
+COPY 5647
