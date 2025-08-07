@@ -1,0 +1,45 @@
+/*
+Online Retail Sales Project 
+This is the classic and best to advancement the knowdlege for PostgreSql and data engineering role
+as this requires modern technologies or architect such as Medallion Architecture. 
+
+Bronze layer -> Raw Sata Meaning only the source data or columns which are needed
+
+Why not enforce primary/foreign keys in Bronze:
+Bronze is about data capture, not integrity enforcement.
+Primary/foreign keys are more useful in Silver (cleansed) or Gold (aggregated) layers.
+Enforcing constraints can fail ingestion if the source data contains errors, duplicates, or orphaned keys.
+
+Next Step -> silve Layer 
+*/
+
+-- starting the bronze layers
+-- customer table
+CREATE TABLE IF NOT EXISTS bronze.customer (
+	customer_ID INT,
+	DOB DATE,
+	GENDER TEXT,
+	city_code INT
+);
+
+-- product category table
+CREATE TABLE IF NOT EXISTS bronze.prod_cat_info (
+	prod_cat_code INT,
+	prod_cat TEXT,
+	prod_sub_cat_code INT,
+	prod_subcat TEXT
+);
+
+-- transaction table
+CREATE TABLE IF NOT EXISTS bronze.transactions (
+	transaction_id BIGINT,
+	cust_id INT,
+	tran_date DATE,
+	prod_subcate_code INT,
+	prod_cat_code INT,
+	Qty INT,
+	Rate INT,
+	Tax NUMERIC(10, 2),
+	total_amt NUMERIC(10, 2),
+	Store_type TEXT
+);
