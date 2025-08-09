@@ -1,0 +1,172 @@
+/*
+cleaned and good data loaded from bronze layer to silver layer..
+
+also have done validation 
+*/
+-- insertion from bronze to silver
+-- Starting with silver.customer
+TRUNCATE TABLE silver.customers;
+-- Insert cleaned and transaction data into silver layer
+INSERT INTO silver.customer(customer_ID, DOB, Gender, city_code)
+SELECT DISTINCT
+	customer_ID,
+	CAST(dob AS DATE),
+	gender,
+	city_code
+FROM bronze.customer
+WHERE customer_ID IS NOT NULL;
+
+-- Checking each 
+SELECT customer_ID, COUNT(*) 
+FROM silver.customer
+GROUP BY customer_ID
+HAVING COUNT(*) > 1;
+
+
+-- insert product_category data into silver layer
+TRUNCATE TABLE silver.product_category;
+INSERT INTO silver.product_category (prod_cat_code,prod_cat)
+SELECT DISTINCT 
+	prod_cat_code,
+	TRIM(prod_cat)
+FROM bronze.prod_cat_info
+WHERE prod_cat_code IS NOT NULL
+	AND prod_cat IS NOT NULL;
+
+-- Checking each 
+SELECT prod_cat_code, COUNT(*) 
+FROM silver.product_category
+GROUP BY prod_cat_code
+HAVING COUNT(*) > 1;
+
+SELECT prod_cat FROM silver.product_category WHERE prod_cat IS NULL;
+
+-- insert sub_category data into silver layers
+TRUNCATE TABLE silver.product_subcategory CASCADE;
+INSERT INTO silver.product_subcategory (
+	prod_sub_cat_code,
+	prod_subcat,
+	prod_cat_code
+)
+SELECT DISTINCT
+	CAST(prod_sub_cat_code AS INT),
+	TRIM(prod_subcat),
+	CAST(prod_cat_code AS INT)
+FROM bronze.prod_cat_info
+WHERE prod_sub_cat_code IS NOT NULL
+	AND prod_subcat IS NOT NULL
+	AND prod_cat_code IS NOT NULL;
+
+SELECT COUNT(*) FROM silver.product_subcategory;
+
+SELECT prod_sub_cat_code, prod_cat_code, COUNT(*)
+FROM silver.product_subcategory
+GROUP BY prod_sub_cat_code, prod_cat_code
+HAVING COUNT(*) > 1;
+
+SELECT DISTINCT prod_sub_cat_code 
+FROM silver.transactions t
+WHERE prod_sub_cat_code NOT IN (
+    SELECT prod_sub_cat_code 
+    FROM silver.product_subcategory
+);
+
+SELECT COUNT(*) FROM silver.product_subcategory
+WHERE prod_subcat IS NULL OR TRIM(prod_subcat) = '';
+
+-- insertion of table 
+SELECT MIN(tran_date) AS start_date,
+       MAX(tran_date) AS end_date
+FROM bronze.transactions;
+-- calender
+TRUNCATE TABLE silver.calender;
+INSERT INTO silver.calender (date_key,day,month,month_name,quarter,year,weekday_name)
+SELECT 	
+	dd::date AS date_key,
+	EXTRACT(DAY FROM dd) AS day,
+	EXTRACT(MONTH FROM dd) AS month,
+	TO_CHAR(dd,'Month') AS month_name,
+	EXTRACT(QUARTER FROM dd) AS quarter,
+	EXTRACT(YEAR FROM dd) AS year,
+	TO_CHAR(dd,'Day') AS weekday_name
+FROM generate_series(
+	'2011-01-01'::date,  -- start date
+    '2025-12-31'::date,  -- end date
+    '1 day'::interval
+)dd;
+
+select * from silver.calender order by date_key desc limit 5;
+
+-- insertion to the transaction table from bronze to silver
+SELECT * FROM bronze.transactions limit 10;
+
+-- negative transaction qty,rate, and total amount
+-- Create error table
+CREATE TABLE IF NOT EXISTS silver.transactions_error AS
+SELECT * FROM bronze.transactions WHERE 1=0;
+-- Insert bad data into error table
+INSERT INTO silver.transactions_error
+SELECT *
+FROM bronze.transactions
+WHERE Qty <= 0 OR Rate <= 0 OR total_amt <= 0;
+
+
+-- identify the bad records first 
+SELECT *
+FROM bronze.transactions
+WHERE Rate < 0 OR total_amt < 0;
+
+SELECT *
+FROM bronze.transactions
+LIMIT 5;
+
+
+-- silver.transactions;
+TRUNCATE TABLE silver.transactions CASCADE;
+INSERT INTO silver.transactions (transaction_id,cust_id,tran_date,prod_sub_cat_code,Qty,Rate,Tax,total_amt,Store_type)
+-- SELECT 
+SELECT DISTINCT
+    transaction_id,
+    cust_id,
+    CAST(tran_date AS DATE) AS tran_date,
+    prod_subcate_code AS prod_sub_cat_code,
+    Qty,
+    Rate,
+    Tax,
+    total_amt,
+    TRIM(Store_type)
+FROM bronze.transactions
+WHERE Qty > 0
+  AND Rate > 0
+  AND total_amt > 0;
+	
+-- validate 
+SELECT COUNT(*) FROM silver.transactions;
+
+SELECT * FROM silver.transactions LIMIT 5;
+
+SELECT COUNT(*) AS negative_values_count
+FROM silver.transactions
+WHERE Qty < 0 OR Rate < 0 OR Tax < 0 OR total_amt < 0;
+
+SELECT * FROM silver.transactions
+ORDER BY tran_date DESC
+LIMIT 10;
+
+SELECT transaction_id, COUNT(*) 
+FROM silver.transactions
+GROUP BY transaction_id
+HAVING COUNT(*) > 1;
+
+
+-- Transactions with cust_id not in customer table
+SELECT DISTINCT cust_id
+FROM silver.transactions t
+LEFT JOIN silver.customer c ON t.cust_id = c.customer_id
+WHERE c.customer_id IS NULL;
+
+-- Transactions with prod_sub_cat_code not in product_subcategory
+SELECT DISTINCT t.prod_sub_cat_code
+FROM silver.transactions t
+LEFT JOIN silver.product_subcategory p ON t.prod_sub_cat_code = p.prod_sub_cat_code
+WHERE p.prod_sub_cat_code IS NULL;
