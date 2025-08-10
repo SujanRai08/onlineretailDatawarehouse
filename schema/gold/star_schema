@@ -1,0 +1,67 @@
+/*
+used star schema as i wanted to use it for BI/Analtyics 
+if strict data ware housing we can use snowflake schema
+*/
+CREATE OR REPLACE VIEW gold.dim_product AS
+SELECT
+    ps.prod_sub_cat_code,
+    ps.prod_subcat,
+    pc.prod_cat_code,
+    pc.prod_cat
+FROM silver.product_subcategory ps
+JOIN silver.product_category pc
+    ON ps.prod_cat_code = pc.prod_cat_code;
+
+CREATE OR REPLACE VIEW gold.dim_customer AS
+SELECT *
+FROM silver.customer;
+
+CREATE OR REPLACE VIEW gold.dim_date AS
+SELECT *
+FROM silver.calender;
+
+CREATE OR REPLACE VIEW gold.fact_sales AS
+SELECT
+    t.transaction_id,
+    t.cust_id,
+    t.prod_sub_cat_code,
+    t.tran_date AS date_key,
+    t.qty,
+    t.rate,
+    t.tax,
+    t.total_amt,
+    t.store_type
+FROM silver.transactions t;
+
+
+-- snowflake schema #
+-- Dimension: Product Category
+CREATE TABLE gold.dim_product_category AS
+SELECT * FROM silver.product_category;
+
+-- Dimension: Product Subcategory
+CREATE TABLE gold.dim_product_subcategory AS
+SELECT * FROM silver.product_subcategory;
+
+-- Dimension: Customer
+CREATE TABLE gold.dim_customer AS
+SELECT * FROM silver.customer;
+
+-- Dimension: Date
+CREATE TABLE gold.dim_date AS
+SELECT * FROM silver.calender;
+
+-- Fact: Sales
+CREATE TABLE gold.fact_sales AS
+SELECT
+    t.transaction_id,
+    t.cust_id,
+    t.prod_sub_cat_code,
+    t.tran_date AS date_key,
+    t.qty,
+    t.rate,
+    t.tax,
+    t.total_amt,
+    t.store_type
+FROM silver.transactions t;
+
